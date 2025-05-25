@@ -1,1 +1,8 @@
+
 project_id = "upctmnieyczjkjitjvyt"
+
+[functions.transcribe]
+verify_jwt = false
+
+[functions.generate-content]
+verify_jwt = false
