@@ -1,12 +1,14 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { FileText, Twitter, Linkedin, Instagram, Send, CheckCircle } from "lucide-react";
+import { FileText, Twitter, Linkedin, Instagram, Send, CheckCircle, Share2, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { saveSharedResult, copyToClipboard } from "@/utils/shareUtils";
 
 interface ContentResultsProps {
   isVisible: boolean;
+  fileName?: string;
 }
 
 // Mock generated content data
@@ -65,8 +67,62 @@ This episode covers the fundamentals of AI-powered content creation and how podc
   ]
 };
 
-export const ContentResults = ({ isVisible }: ContentResultsProps) => {
+export const ContentResults = ({ isVisible, fileName = "podcast-episode.mp3" }: ContentResultsProps) => {
   const [showNotionModal, setShowNotionModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const { toast } = useToast();
+
+  const handleGenerateShareLink = async () => {
+    setIsGeneratingLink(true);
+    
+    try {
+      const shareId = await saveSharedResult(fileName, mockContent);
+      
+      if (shareId) {
+        const url = `${window.location.origin}/share/${shareId}`;
+        setShareUrl(url);
+        setShowShareModal(true);
+        
+        toast({
+          title: "Share link created!",
+          description: "Your content is now ready to share with others.",
+        });
+      } else {
+        toast({
+          title: "Failed to create share link",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error creating share link",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const success = await copyToClipboard(shareUrl);
+    
+    if (success) {
+      toast({
+        title: "Link copied!",
+        description: "Share link has been copied to your clipboard.",
+      });
+    } else {
+      toast({
+        title: "Failed to copy link",
+        description: "Please copy the link manually.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -83,13 +139,24 @@ export const ContentResults = ({ isVisible }: ContentResultsProps) => {
           <p className="text-xl text-white/70 mb-8">
             AI has generated all your social media content and show notes
           </p>
-          <Button 
-            onClick={() => setShowNotionModal(true)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-          >
-            <Send className="w-5 h-5 mr-2" />
-            Send to Notion
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => setShowNotionModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              <Send className="w-5 h-5 mr-2" />
+              Send to Notion
+            </Button>
+            <Button 
+              onClick={handleGenerateShareLink}
+              disabled={isGeneratingLink}
+              variant="outline"
+              className="border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full"
+            >
+              <Share2 className="w-5 h-5 mr-2" />
+              {isGeneratingLink ? "Creating Link..." : "Share Results"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">
@@ -197,6 +264,45 @@ export const ContentResults = ({ isVisible }: ContentResultsProps) => {
               >
                 View in Notion
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Link Modal */}
+        <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+          <DialogContent className="bg-white/10 backdrop-blur-lg border-white/20 text-white">
+            <DialogHeader>
+              <div className="flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mx-auto mb-4">
+                <Share2 className="w-8 h-8 text-white" />
+              </div>
+              <DialogTitle className="text-2xl text-center text-white">
+                Share Your Results!
+              </DialogTitle>
+              <DialogDescription className="text-center text-white/70 text-base">
+                Your content is now available via a shareable link. Anyone with this link can view your generated content.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                <p className="text-white/60 text-sm mb-2">Shareable Link:</p>
+                <p className="text-white text-sm break-all font-mono">{shareUrl}</p>
+              </div>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={handleCopyLink}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Link
+                </Button>
+                <Button 
+                  onClick={() => setShowShareModal(false)}
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

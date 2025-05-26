@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,8 +213,8 @@ export const AudioUpload = () => {
         </div>
       </section>
 
-      {/* Content Results Section */}
-      <ContentResults isVisible={uploadState === 'completed'} />
+      {/* Content Results Section with filename */}
+      <ContentResults isVisible={uploadState === 'completed'} fileName={fileName} />
     </>
   );
 };
