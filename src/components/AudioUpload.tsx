@@ -1,26 +1,37 @@
+
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Upload, FileAudio, CheckCircle, Loader, Sparkles } from "lucide-react";
+import { Upload, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ContentResults } from "./ContentResults";
+import { LoadingStates } from "./LoadingStates";
+import { ErrorStates } from "./ErrorStates";
+import { EmptyStates } from "./EmptyStates";
 
-type UploadState = 'idle' | 'uploading' | 'uploaded' | 'transcribing' | 'generating' | 'completed';
+type UploadState = 'idle' | 'uploading' | 'uploaded' | 'transcribing' | 'generating' | 'completed' | 'error';
 
 export const AudioUpload = () => {
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileName, setFileName] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const { toast } = useToast();
 
   const handleFileUpload = useCallback((file: File) => {
+    // Reset any previous errors
+    setErrorMessage('');
+    
     if (!file.type.includes('audio')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an audio file (MP3, WAV, etc.)",
-        variant: "destructive"
-      });
+      setErrorMessage("Please upload an audio file (MP3, WAV, etc.)");
+      setUploadState('error');
+      return;
+    }
+
+    // Check file size (100MB limit)
+    if (file.size > 100 * 1024 * 1024) {
+      setErrorMessage("File size must be less than 100MB");
+      setUploadState('error');
       return;
     }
 
@@ -28,22 +39,37 @@ export const AudioUpload = () => {
     setUploadState('uploading');
     setUploadProgress(0);
 
-    // Simulate upload progress
+    // Simulate upload progress with potential for failure
     const uploadInterval = setInterval(() => {
       setUploadProgress(prev => {
         if (prev >= 100) {
           clearInterval(uploadInterval);
+          
+          // Simulate random upload failure (10% chance for demo)
+          if (Math.random() < 0.1) {
+            setErrorMessage("Upload failed due to network issues");
+            setUploadState('error');
+            return 100;
+          }
+          
           setUploadState('uploaded');
           
-          // Simulate transcription after upload
+          // Continue with transcription
           setTimeout(() => {
             setUploadState('transcribing');
             
-            // Simulate content generation after transcription
+            // Simulate transcription with potential failure
             setTimeout(() => {
+              // Simulate random transcription failure (10% chance for demo)
+              if (Math.random() < 0.1) {
+                setErrorMessage("Transcription failed - audio quality may be too low");
+                setUploadState('error');
+                return;
+              }
+              
               setUploadState('generating');
               
-              // Simulate completion
+              // Simulate content generation
               setTimeout(() => {
                 setUploadState('completed');
                 toast({
@@ -76,6 +102,17 @@ export const AudioUpload = () => {
     setUploadState('idle');
     setUploadProgress(0);
     setFileName('');
+    setErrorMessage('');
+  };
+
+  const retryUpload = () => {
+    setUploadState('idle');
+    setErrorMessage('');
+    setUploadProgress(0);
+  };
+
+  const scrollToUpload = () => {
+    document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -103,10 +140,58 @@ export const AudioUpload = () => {
             </CardHeader>
             <CardContent className="p-8">
               {uploadState === 'idle' && (
+                <EmptyStates type="upload" onAction={scrollToUpload} />
+              )}
+
+              {uploadState === 'error' && (
+                <ErrorStates 
+                  type="upload"
+                  message={errorMessage}
+                  onRetry={retryUpload}
+                  onReset={resetUpload}
+                />
+              )}
+
+              {(uploadState === 'uploading' || uploadState === 'transcribing' || uploadState === 'generating') && (
+                <LoadingStates 
+                  state={uploadState === 'uploading' ? 'uploading' : uploadState === 'transcribing' ? 'transcribing' : 'generating'}
+                  fileName={fileName}
+                  progress={uploadState === 'uploading' ? uploadProgress : undefined}
+                />
+              )}
+
+              {uploadState === 'uploaded' && (
+                <div className="text-center">
+                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-6" />
+                  <h3 className="text-xl text-white mb-4">Upload Complete!</h3>
+                  <p className="text-white/60">Preparing for transcription...</p>
+                </div>
+              )}
+
+              {uploadState === 'completed' && (
+                <div className="text-center">
+                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-6" />
+                  <h3 className="text-xl text-white mb-4">All Content Generated!</h3>
+                  <p className="text-white/60 mb-6">
+                    Your podcast has been processed and all content is ready below
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button 
+                      onClick={resetUpload}
+                      variant="outline"
+                      className="border-white/30 text-white hover:bg-white/10 px-8 py-3 rounded-full"
+                    >
+                      Upload Another Episode
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {uploadState === 'idle' && (
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className="border-2 border-dashed border-white/30 rounded-lg p-12 text-center hover:border-white/50 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-white/30 rounded-lg p-12 text-center hover:border-white/50 transition-colors cursor-pointer mt-8"
                 >
                   <Upload className="w-16 h-16 text-white/60 mx-auto mb-6" />
                   <h3 className="text-xl text-white mb-4">
@@ -135,72 +220,6 @@ export const AudioUpload = () => {
                   </p>
                 </div>
               )}
-
-              {uploadState === 'uploading' && (
-                <div className="text-center">
-                  <FileAudio className="w-16 h-16 text-purple-400 mx-auto mb-6" />
-                  <h3 className="text-xl text-white mb-4">Uploading {fileName}</h3>
-                  <Progress value={uploadProgress} className="mb-4" />
-                  <p className="text-white/60">{uploadProgress}% uploaded</p>
-                </div>
-              )}
-
-              {uploadState === 'uploaded' && (
-                <div className="text-center">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-6" />
-                  <h3 className="text-xl text-white mb-4">Upload Complete!</h3>
-                  <p className="text-white/60">Preparing for transcription...</p>
-                </div>
-              )}
-
-              {uploadState === 'transcribing' && (
-                <div className="text-center">
-                  <Loader className="w-16 h-16 text-blue-400 mx-auto mb-6 animate-spin" />
-                  <h3 className="text-xl text-white mb-4">Transcribing Your Podcast</h3>
-                  <p className="text-white/60">
-                    Our AI is listening to your content and generating transcripts...
-                  </p>
-                  <div className="mt-6 p-4 bg-blue-500/20 rounded-lg">
-                    <p className="text-blue-200 text-sm">
-                      💡 This usually takes 1-2 minutes for a 30-minute episode
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {uploadState === 'generating' && (
-                <div className="text-center">
-                  <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-6 animate-pulse" />
-                  <h3 className="text-xl text-white mb-4">Generating Content</h3>
-                  <p className="text-white/60 mb-4">
-                    AI is creating your show notes, social media posts, and Instagram hooks...
-                  </p>
-                  <div className="mt-6 p-4 bg-purple-500/20 rounded-lg">
-                    <p className="text-purple-200 text-sm">
-                      ✨ Creating 20+ pieces of content from your podcast
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {uploadState === 'completed' && (
-                <div className="text-center">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-6" />
-                  <h3 className="text-xl text-white mb-4">All Content Generated!</h3>
-                  <p className="text-white/60 mb-6">
-                    Your podcast has been processed and all content is ready below
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button 
-                      onClick={resetUpload}
-                      variant="outline"
-                      className="border-white/30 text-white hover:bg-white/10 px-8 py-3 rounded-full"
-                    >
-                      Upload Another Episode
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -213,7 +232,7 @@ export const AudioUpload = () => {
         </div>
       </section>
 
-      {/* Content Results Section with filename */}
+      {/* Content Results Section */}
       <ContentResults isVisible={uploadState === 'completed'} fileName={fileName} />
     </>
   );

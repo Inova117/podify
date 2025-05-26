@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { FileText, Twitter, Linkedin, Instagram, ArrowLeft, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { ContentLoadingSkeleton } from "@/components/LoadingStates";
+import { ErrorStates } from "@/components/ErrorStates";
 
 interface SharedResultData {
   filename: string;
@@ -60,26 +63,56 @@ const SharedResult = () => {
     fetchSharedResult();
   }, [shareId]);
 
+  const retryFetch = () => {
+    setError(null);
+    setLoading(true);
+    // Trigger the useEffect again by creating a small delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading shared content...</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="relative">
+          {/* Background decoration */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%221%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+          
+          <div className="relative px-4 py-12">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-12">
+                <Link to="/" className="inline-flex items-center text-white/70 hover:text-white mb-6 transition-colors">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to AI Podcast Repurposer
+                </Link>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Loading Shared Content...
+                </h1>
+              </div>
+              <ContentLoadingSkeleton />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl text-white mb-4">Content Not Found</h1>
-          <p className="text-white/70 mb-8">{error || "This shared link is invalid or has expired."}</p>
-          <Link to="/">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Home
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <Link to="/" className="inline-flex items-center text-white/70 hover:text-white mb-8 transition-colors">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to AI Podcast Repurposer
           </Link>
+          
+          <ErrorStates 
+            type="not-found"
+            message={error || "This shared link is invalid or has expired."}
+            onRetry={retryFetch}
+            onReset={() => window.location.href = '/'}
+          />
         </div>
       </div>
     );

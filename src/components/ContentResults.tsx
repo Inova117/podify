@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { FileText, Twitter, Linkedin, Instagram, Send, CheckCircle, Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { saveSharedResult, copyToClipboard } from "@/utils/shareUtils";
+import { ContentLoadingSkeleton } from "./LoadingStates";
+import { InlineErrorAlert } from "./ErrorStates";
 
 interface ContentResultsProps {
   isVisible: boolean;
@@ -72,10 +75,13 @@ export const ContentResults = ({ isVisible, fileName = "podcast-episode.mp3" }: 
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [shareError, setShareError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleGenerateShareLink = async () => {
     setIsGeneratingLink(true);
+    setShareError("");
     
     try {
       const shareId = await saveSharedResult(fileName, mockContent);
@@ -90,18 +96,10 @@ export const ContentResults = ({ isVisible, fileName = "podcast-episode.mp3" }: 
           description: "Your content is now ready to share with others.",
         });
       } else {
-        toast({
-          title: "Failed to create share link",
-          description: "Please try again.",
-          variant: "destructive",
-        });
+        setShareError("Failed to create share link. Please try again.");
       }
     } catch (error) {
-      toast({
-        title: "Error creating share link",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+      setShareError("Network error. Please check your connection and try again.");
     } finally {
       setIsGeneratingLink(false);
     }
@@ -122,6 +120,11 @@ export const ContentResults = ({ isVisible, fileName = "podcast-episode.mp3" }: 
         variant: "destructive",
       });
     }
+  };
+
+  const retryShareLink = () => {
+    setShareError("");
+    handleGenerateShareLink();
   };
 
   if (!isVisible) return null;
@@ -157,90 +160,100 @@ export const ContentResults = ({ isVisible, fileName = "podcast-episode.mp3" }: 
               {isGeneratingLink ? "Creating Link..." : "Share Results"}
             </Button>
           </div>
+
+          {shareError && (
+            <div className="mt-4 max-w-md mx-auto">
+              <InlineErrorAlert message={shareError} onRetry={retryShareLink} />
+            </div>
+          )}
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Show Notes */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-3">
-                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 w-10 h-10 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                Show Notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-white/80 whitespace-pre-line text-sm leading-relaxed max-h-80 overflow-y-auto">
-                {mockContent.showNotes.content}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tweets */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-3">
-                <div className="bg-gradient-to-r from-blue-400 to-blue-600 w-10 h-10 rounded-lg flex items-center justify-center">
-                  <Twitter className="w-5 h-5 text-white" />
-                </div>
-                Twitter Posts ({mockContent.tweets.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-80 overflow-y-auto">
-                {mockContent.tweets.map((tweet, index) => (
-                  <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
-                    <p className="text-white/80 text-sm">{tweet}</p>
+        {isLoading ? (
+          <ContentLoadingSkeleton />
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Show Notes */}
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-blue-500 to-cyan-500 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* LinkedIn Posts */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-3">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 w-10 h-10 rounded-lg flex items-center justify-center">
-                  <Linkedin className="w-5 h-5 text-white" />
+                  Show Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-white/80 whitespace-pre-line text-sm leading-relaxed max-h-80 overflow-y-auto">
+                  {mockContent.showNotes.content}
                 </div>
-                LinkedIn Posts ({mockContent.linkedinPosts.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-80 overflow-y-auto">
-                {mockContent.linkedinPosts.map((post, index) => (
-                  <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
-                    <p className="text-blue-300 text-sm font-medium mb-2">{post.hook}</p>
-                    <p className="text-white/80 text-sm whitespace-pre-line">{post.content}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Instagram Hooks */}
-          <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-3">
-                <div className="bg-gradient-to-r from-pink-500 to-purple-600 w-10 h-10 rounded-lg flex items-center justify-center">
-                  <Instagram className="w-5 h-5 text-white" />
-                </div>
-                Instagram Hooks ({mockContent.instagramHooks.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {mockContent.instagramHooks.map((hook, index) => (
-                  <div key={index} className="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <p className="text-white/80 text-sm">{hook}</p>
+            {/* Tweets */}
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-blue-400 to-blue-600 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Twitter className="w-5 h-5 text-white" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  Twitter Posts ({mockContent.tweets.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 max-h-80 overflow-y-auto">
+                  {mockContent.tweets.map((tweet, index) => (
+                    <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <p className="text-white/80 text-sm">{tweet}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* LinkedIn Posts */}
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-800 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Linkedin className="w-5 h-5 text-white" />
+                  </div>
+                  LinkedIn Posts ({mockContent.linkedinPosts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 max-h-80 overflow-y-auto">
+                  {mockContent.linkedinPosts.map((post, index) => (
+                    <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <p className="text-blue-300 text-sm font-medium mb-2">{post.hook}</p>
+                      <p className="text-white/80 text-sm whitespace-pre-line">{post.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Instagram Hooks */}
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-pink-500 to-purple-600 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Instagram className="w-5 h-5 text-white" />
+                  </div>
+                  Instagram Hooks ({mockContent.instagramHooks.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {mockContent.instagramHooks.map((hook, index) => (
+                    <div key={index} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <p className="text-white/80 text-sm">{hook}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Notion Success Modal */}
         <Dialog open={showNotionModal} onOpenChange={setShowNotionModal}>
