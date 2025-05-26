@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +39,16 @@ const SharedResult = () => {
         if (error) {
           setError("Shared content not found");
         } else {
-          setData(result);
+          // Type-cast the Json types to the expected types
+          const typedResult: SharedResultData = {
+            filename: result.filename,
+            show_notes: result.show_notes,
+            tweets: result.tweets as string[],
+            linkedin_posts: result.linkedin_posts as Array<{ hook: string; content: string }>,
+            instagram_hooks: result.instagram_hooks as string[],
+            created_at: result.created_at,
+          };
+          setData(typedResult);
         }
       } catch (err) {
         setError("Failed to load shared content");
