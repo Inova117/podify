@@ -2,6 +2,7 @@
 import { Hero } from "@/components/Hero";
 import { Benefits } from "@/components/Benefits";
 import { AudioUpload } from "@/components/AudioUpload";
+import { FAQ } from "@/components/FAQ";
 
 const Index = () => {
   return (
@@ -13,11 +14,12 @@ const Index = () => {
         <div className="relative">
           <Hero />
           <Benefits />
+          <FAQ />
           <AudioUpload />
           
           {/* Footer */}
-          <footer className="py-12 text-center text-white/60">
-            <p>© 2024 AI Podcast Repurposer. Transform your audio into viral content.</p>
+          <footer className="py-12 text-center text-white/60 border-t border-white/10">
+            <p className="text-sm">© 2024 AI Podcast Repurposer. Transform your audio into viral content that your audience will love.</p>
           </footer>
         </div>
       </div>

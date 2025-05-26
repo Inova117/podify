@@ -13,9 +13,9 @@ export const Hero = () => {
     <section className="relative py-20 px-4 text-center">
       <div className="max-w-6xl mx-auto">
         {/* Main Headline */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-            Turn Your{" "}
+            Transform Your{" "}
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               Podcast
             </span>{" "}
@@ -26,31 +26,31 @@ export const Hero = () => {
           </h1>
           
           <p className="text-xl md:text-2xl text-white/80 mb-8 max-w-3xl mx-auto">
-            Upload your MP3 and get show notes, social media posts, Instagram reel hooks, 
-            and more — all delivered straight to your Notion workspace in minutes.
+            Upload your audio file and get professionally crafted show notes, engaging social media posts, 
+            viral Instagram hooks, and more — all optimized for maximum reach and delivered in minutes.
           </p>
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in" style={{animationDelay: '0.2s'}}>
           <Button 
             onClick={scrollToUpload}
             size="lg" 
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
-            Upload Your Podcast Now
+            Start Creating Content Now
           </Button>
           <Button 
             variant="outline" 
             size="lg"
-            className="border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm"
+            className="border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:border-white/50"
           >
-            See Live Demo
+            See How It Works
           </Button>
         </div>
 
         {/* Scroll indicator */}
-        <div className="animate-bounce">
+        <div className="animate-bounce" style={{animationDelay: '0.4s'}}>
           <ArrowDown className="w-6 h-6 text-white/60 mx-auto" />
         </div>
       </div>
