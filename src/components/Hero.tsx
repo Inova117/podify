@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, BarChart3 } from "lucide-react";
 
 export const Hero = () => {
   const scrollToUpload = () => {
@@ -12,6 +12,18 @@ export const Hero = () => {
   return (
     <section className="relative py-20 px-4 text-center">
       <div className="max-w-6xl mx-auto">
+        {/* Dashboard Link */}
+        <div className="absolute top-4 right-4">
+          <Button 
+            onClick={() => window.location.href = '/dashboard'}
+            variant="outline"
+            className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:border-white/50"
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
+        </div>
+
         {/* Main Headline */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
