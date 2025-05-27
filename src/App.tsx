@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import SharedResult from "./pages/SharedResult";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/share/:shareId" element={<SharedResult />} />
             <Route 
               path="/dashboard" 

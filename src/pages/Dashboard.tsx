@@ -10,6 +10,7 @@ import { ContentLibrary } from "@/components/dashboard/ContentLibrary";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { ConfigurationPanel } from "@/components/dashboard/ConfigurationPanel";
+import { SubscriptionStatus } from "@/components/SubscriptionStatus";
 import { LoadingStates } from "@/components/LoadingStates";
 import { ErrorStates } from "@/components/ErrorStates";
 import { useToast } from "@/hooks/use-toast";
@@ -177,45 +178,52 @@ const Dashboard = () => {
                   totalUploads={dashboardData.totalUploads}
                   totalContent={dashboardData.totalContent}
                 />
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <QuickActions />
-                  
-                  {/* Recent Activity */}
-                  <Card className="bg-white/10 backdrop-blur-lg border-white/20">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <Clock className="w-5 h-5" />
-                        Recent Activity
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {dashboardData.recentUploads.length > 0 ? (
-                        <div className="space-y-3">
-                          {dashboardData.recentUploads.slice(0, 5).map((upload) => (
-                            <div key={upload.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <FileAudio className="w-4 h-4 text-purple-400" />
-                                <div>
-                                  <p className="text-white font-medium">{upload.filename}</p>
-                                  <p className="text-white/60 text-sm">
-                                    {new Date(upload.created_at).toLocaleDateString()}
-                                  </p>
+                <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <QuickActions />
+                    
+                    {/* Recent Activity */}
+                    <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                          <Clock className="w-5 h-5" />
+                          Recent Activity
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {dashboardData.recentUploads.length > 0 ? (
+                          <div className="space-y-3">
+                            {dashboardData.recentUploads.slice(0, 5).map((upload) => (
+                              <div key={upload.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <FileAudio className="w-4 h-4 text-purple-400" />
+                                  <div>
+                                    <p className="text-white font-medium">{upload.filename}</p>
+                                    <p className="text-white/60 text-sm">
+                                      {new Date(upload.created_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
                                 </div>
+                                {upload.share_id && (
+                                  <Badge variant="secondary" className="bg-green-500/20 text-green-300">
+                                    <Share2 className="w-3 h-3 mr-1" />
+                                    Shared
+                                  </Badge>
+                                )}
                               </div>
-                              {upload.share_id && (
-                                <Badge variant="secondary" className="bg-green-500/20 text-green-300">
-                                  <Share2 className="w-3 h-3 mr-1" />
-                                  Shared
-                                </Badge>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-white/60 text-center py-4">No recent activity</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-white/60 text-center py-4">No recent activity</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Subscription Status Sidebar */}
+                  <div>
+                    <SubscriptionStatus />
+                  </div>
                 </div>
               </>
             )}
