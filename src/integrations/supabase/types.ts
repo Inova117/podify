@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       shared_results: {
         Row: {
           created_at: string
@@ -19,6 +43,7 @@ export type Database = {
           share_id: string
           show_notes: string
           tweets: Json
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -29,6 +54,7 @@ export type Database = {
           share_id: string
           show_notes: string
           tweets: Json
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -39,6 +65,7 @@ export type Database = {
           share_id?: string
           show_notes?: string
           tweets?: Json
+          user_id?: string | null
         }
         Relationships: []
       }

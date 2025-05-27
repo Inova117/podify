@@ -17,6 +17,14 @@ export const saveSharedResult = async (
   content: ContentData
 ): Promise<string | null> => {
   try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error('No authenticated user found');
+      return null;
+    }
+
     const shareId = generateShareId();
     
     const { error } = await supabase
@@ -24,6 +32,7 @@ export const saveSharedResult = async (
       .insert({
         share_id: shareId,
         filename,
+        user_id: user.id, // Link content to authenticated user
         show_notes: content.showNotes.content,
         tweets: content.tweets,
         linkedin_posts: content.linkedinPosts,

@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { FileAudio, Settings, History, Plus, Share2, Calendar, Clock } from "lucide-react";
+import { FileAudio, Settings, History, Plus, Share2, Calendar, Clock, User, LogOut } from "lucide-react";
 import { ContentLibrary } from "@/components/dashboard/ContentLibrary";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -12,6 +13,8 @@ import { ConfigurationPanel } from "@/components/dashboard/ConfigurationPanel";
 import { LoadingStates } from "@/components/LoadingStates";
 import { ErrorStates } from "@/components/ErrorStates";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardData {
   totalUploads: number;
@@ -30,20 +33,25 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Fetch recent uploads and stats
+      // Fetch recent uploads and stats for current user
       const { data: uploads, error: uploadsError } = await supabase
         .from('shared_results')
         .select('id, filename, created_at, share_id')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -51,7 +59,8 @@ const Dashboard = () => {
 
       const { count: totalCount, error: countError } = await supabase
         .from('shared_results')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
 
       if (countError) throw countError;
 
@@ -75,6 +84,15 @@ const Dashboard = () => {
 
   const handleRetry = () => {
     loadDashboardData();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully",
+    });
+    navigate('/');
   };
 
   if (isLoading) {
@@ -104,15 +122,35 @@ const Dashboard = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-white mb-2">Content Dashboard</h1>
-            <p className="text-white/70 text-lg">Manage your podcast content and track your progress</p>
+            <p className="text-white/70 text-lg">
+              Welcome back, {profile?.full_name || user?.email}
+            </p>
           </div>
-          <Button 
-            onClick={() => window.location.href = '/'}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white mt-4 lg:mt-0"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Content
-          </Button>
+          <div className="flex items-center gap-3 mt-4 lg:mt-0">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/account')}
+              className="text-white hover:bg-white/10"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Account
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className="text-white hover:bg-white/10"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/'}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Content
+            </Button>
+          </div>
         </div>
 
         {/* Dashboard Tabs */}
