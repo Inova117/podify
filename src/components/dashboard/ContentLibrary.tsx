@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,7 +110,7 @@ export const ContentLibrary = ({ onRetry }: ContentLibraryProps) => {
   if (error) {
     return (
       <ErrorStates 
-        type="api_error" 
+        type="api" 
         message={error}
         onRetry={() => {
           loadContent();
@@ -124,8 +123,8 @@ export const ContentLibrary = ({ onRetry }: ContentLibraryProps) => {
   if (content.length === 0) {
     return (
       <EmptyStates 
-        type="no_upload"
-        onUpload={() => window.location.href = '/'}
+        type="upload"
+        onAction={() => window.location.href = '/'}
       />
     );
   }
