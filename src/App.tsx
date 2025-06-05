@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import EnhancedDashboard from "./pages/EnhancedDashboard";
 import SharedResult from "./pages/SharedResult";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
@@ -33,6 +34,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/enhanced-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <EnhancedDashboard />
                 </ProtectedRoute>
               } 
             />

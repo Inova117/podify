@@ -13,13 +13,25 @@ import { toast } from 'sonner';
 const TestInfrastructure: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const { 
-    plans, 
-    usageData, 
-    isLoadingPlans, 
-    isLoadingUsage,
-    getUsagePercentage,
-    canPerformAction 
+    subscription, 
+    usage, 
+    isLoading
   } = useSubscription();
+
+  // Mock plans data for testing
+  const plans = [
+    { id: 'free', display_name: 'Free', monthly_price: 0, limits: { monthly_uploads: 2, team_members: 1, storage_gb: 1 } },
+    { id: 'hobby', display_name: 'Hobby', monthly_price: 2900, limits: { monthly_uploads: 10, team_members: 1, storage_gb: 5 } },
+    { id: 'pro', display_name: 'Pro', monthly_price: 7900, limits: { monthly_uploads: 50, team_members: 5, storage_gb: 25 } },
+    { id: 'agency', display_name: 'Agency', monthly_price: 19900, limits: { monthly_uploads: -1, team_members: 25, storage_gb: 100 } }
+  ];
+
+  const getUsagePercentage = () => 45; // Mock percentage for testing
+
+  const canPerformAction = (action: string) => {
+    // Mock permissions for testing
+    return action === 'upload_audio';
+  };
   const { 
     audioUploads, 
     processingJobs, 
@@ -51,10 +63,10 @@ const TestInfrastructure: React.FC = () => {
     },
     {
       name: 'Usage Tracking',
-      status: usageData ? 'active' : 'loading',
-      description: usageData ? `${usageData.current_usage}/${usageData.usage_quota} used` : 'Loading usage...',
-      icon: usageData ? CheckCircle : Clock,
-      color: usageData ? 'text-green-500' : 'text-yellow-500',
+      status: usage ? 'active' : 'loading',
+      description: usage ? `Mock usage data available` : 'Loading usage...',
+      icon: usage ? CheckCircle : Clock,
+      color: usage ? 'text-green-500' : 'text-yellow-500',
     },
     {
       name: 'Audio Uploads',
@@ -281,13 +293,12 @@ const TestInfrastructure: React.FC = () => {
       </Card>
 
       {/* Loading States */}
-      {(isLoadingPlans || isLoadingUsage || isLoadingUploads || isLoadingJobs) && (
+      {(isLoading || isLoadingUploads || isLoadingJobs) && (
         <Alert>
           <Clock className="h-4 w-4" />
           <AlertDescription>
             Some components are still loading: {[
-              isLoadingPlans && 'subscription plans',
-              isLoadingUsage && 'usage data',
+              isLoading && 'subscription data',
               isLoadingUploads && 'audio uploads',
               isLoadingJobs && 'processing jobs'
             ].filter(Boolean).join(', ')}

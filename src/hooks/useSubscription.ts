@@ -1,367 +1,320 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/integrations/supabase/client'
+import { getStripe, SUBSCRIPTION_PLANS, type SubscriptionPlanId } from '@/lib/stripe'
+import { toast } from 'sonner'
 
-export interface SubscriptionPlan {
-  id: string;
-  name: string;
-  display_name: string;
-  description?: string;
-  monthly_price: number;
-  yearly_price: number;
-  features: Record<string, any>;
-  limits: {
-    monthly_uploads: number;
-    team_members: number;
-    storage_gb: number;
-    api_calls: number;
-  };
-  is_active: boolean;
+interface SubscriptionData {
+  id: string
+  planId: SubscriptionPlanId
+  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete'
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  cancelAtPeriodEnd: boolean
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
 }
 
-export interface UserSubscription {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  status: 'active' | 'inactive' | 'canceled' | 'past_due' | 'unpaid';
-  current_period_start?: string;
-  current_period_end?: string;
-  cancel_at?: string;
-  trial_start?: string;
-  trial_end?: string;
-  stripe_subscription_id?: string;
-  stripe_customer_id?: string;
-  metadata?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UsageData {
-  current_usage: number;
-  usage_quota: number;
-  subscription_tier: string;
-  quota_reset_date?: string;
-  monthly_breakdown: {
-    audio_upload: number;
-    transcription: number;
-    content_generation: number;
-    export: number;
-    api_call: number;
-  };
+interface UsageData {
+  currentUsage: number
+  quota: number
+  resetDate: string
+  percentage: number
 }
 
 export const useSubscription = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { user } = useAuth()
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
+  const [usage, setUsage] = useState<UsageData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  // Fetch available subscription plans
-  const {
-    data: plans = [],
-    isLoading: isLoadingPlans,
-    error: plansError
-  } = useQuery({
-    queryKey: ['subscription-plans'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('is_active', true)
-        .order('monthly_price', { ascending: true });
+  // Load subscription data
+  const loadSubscription = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
 
-      if (error) throw error;
-      // Transform the data to match our interface
-      return data.map(plan => ({
-        ...plan,
-        features: plan.features as Record<string, any>,
-        limits: plan.limits as {
-          monthly_uploads: number;
-          team_members: number;
-          storage_gb: number;
-          api_calls: number;
-        },
-      })) as SubscriptionPlan[];
-    },
-  });
-
-  // Fetch user's current subscription
-  const {
-    data: currentSubscription,
-    isLoading: isLoadingSubscription,
-    error: subscriptionError
-  } = useQuery({
-    queryKey: ['user-subscription', user?.id],
-    queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select(`
-          *,
-          subscription_plans(*)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
-      
-      if (!data) return null;
-      
-      // Transform the data to match our interface
-      return {
-        ...data,
-        subscription_plans: {
-          ...data.subscription_plans,
-          features: data.subscription_plans.features as Record<string, any>,
-          limits: data.subscription_plans.limits as {
-            monthly_uploads: number;
-            team_members: number;
-            storage_gb: number;
-            api_calls: number;
-          },
-        },
-      } as UserSubscription & { subscription_plans: SubscriptionPlan };
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch user's usage data
-  const {
-    data: usageData,
-    isLoading: isLoadingUsage,
-    error: usageError
-  } = useQuery({
-    queryKey: ['user-usage', user?.id],
-    queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      // Get user profile with current usage
+    try {
+      // Get user profile with subscription info
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('current_usage, usage_quota, subscription_tier, quota_reset_date')
+        .select('subscription_tier, current_usage, usage_quota, quota_reset_date')
         .eq('id', user.id)
-        .single();
+        .single()
 
-      if (profileError) throw profileError;
+      if (profileError) throw profileError
 
-      // Get current month's usage breakdown
-      const currentMonth = new Date();
-      const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-
-      const { data: usageTracking, error: usageError } = await supabase
-        .from('usage_tracking')
-        .select('action_type, usage_count')
+      // Get subscription details
+      const { data: subscriptionData, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*')
         .eq('user_id', user.id)
-        .gte('billing_period_start', firstDay.toISOString().split('T')[0])
-        .lte('billing_period_end', lastDay.toISOString().split('T')[0]);
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (usageError) throw usageError;
+      if (subError) throw subError
 
-      // Aggregate usage by action type
-      const monthlyBreakdown = usageTracking.reduce(
-        (acc, item) => ({
-          ...acc,
-          [item.action_type]: (acc[item.action_type] || 0) + (item.usage_count || 0),
-        }),
-        {
-          audio_upload: 0,
-          transcription: 0,
-          content_generation: 0,
-          export: 0,
-          api_call: 0,
-        }
-      );
+      // Set subscription data
+      if (subscriptionData) {
+                 setSubscription({
+           id: subscriptionData.id,
+           planId: subscriptionData.plan_id as SubscriptionPlanId,
+           status: subscriptionData.status as 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete',
+           currentPeriodStart: subscriptionData.current_period_start || '',
+           currentPeriodEnd: subscriptionData.current_period_end || '',
+           cancelAtPeriodEnd: subscriptionData.cancel_at !== null,
+           stripeCustomerId: subscriptionData.stripe_customer_id || undefined,
+           stripeSubscriptionId: subscriptionData.stripe_subscription_id || undefined
+         })
+      } else {
+        // No active subscription, user is on free plan
+        setSubscription({
+          id: 'free',
+          planId: 'free',
+          status: 'active',
+          currentPeriodStart: new Date().toISOString(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cancelAtPeriodEnd: false
+        })
+      }
 
-      return {
-        current_usage: profile.current_usage || 0,
-        usage_quota: profile.usage_quota || 2,
-        subscription_tier: profile.subscription_tier || 'free',
-        quota_reset_date: profile.quota_reset_date,
-        monthly_breakdown: monthlyBreakdown,
-      } as UsageData;
-    },
-    enabled: !!user?.id,
-  });
+      // Set usage data
+      const plan = SUBSCRIPTION_PLANS[profile?.subscription_tier as SubscriptionPlanId] || SUBSCRIPTION_PLANS.free
+      setUsage({
+        currentUsage: profile?.current_usage || 0,
+        quota: plan.limits.uploadsPerMonth,
+        resetDate: profile?.quota_reset_date || new Date().toISOString(),
+        percentage: plan.limits.uploadsPerMonth > 0 
+          ? Math.round(((profile?.current_usage || 0) / plan.limits.uploadsPerMonth) * 100)
+          : 0
+      })
+
+    } catch (error) {
+      console.error('Error loading subscription:', error)
+      toast.error('Failed to load subscription data')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user])
 
   // Create Stripe checkout session
-  const createCheckoutMutation = useMutation({
-    mutationFn: async ({
-      planId,
-      billingInterval = 'monthly',
-      successUrl,
-      cancelUrl
-    }: {
-      planId: string;
-      billingInterval?: 'monthly' | 'yearly';
-      successUrl?: string;
-      cancelUrl?: string;
-    }) => {
-      if (!user?.id) throw new Error('User not authenticated');
+  const createCheckoutSession = useCallback(async (
+    planId: SubscriptionPlanId,
+    billing: 'monthly' | 'yearly' = 'monthly'
+  ) => {
+    if (!user || planId === 'free') return
 
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) throw new Error('Plan not found');
+    setIsProcessing(true)
 
-      // For development, return mock data
-      if (process.env.NODE_ENV === 'development') {
-        return {
-          url: '/dashboard?upgrade=success',
-          sessionId: 'mock_session_id',
-        };
+    try {
+      const plan = SUBSCRIPTION_PLANS[planId]
+      if (!plan.stripePriceId) {
+        throw new Error('Invalid plan selected')
       }
 
-      // TODO: Implement Stripe checkout session creation
+      const priceId = typeof plan.stripePriceId === 'object' 
+        ? plan.stripePriceId[billing]
+        : plan.stripePriceId
+
+      // Call our edge function to create checkout session
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
+          priceId,
           planId,
-          billingInterval,
-          successUrl: successUrl || `${window.location.origin}/dashboard?upgrade=success`,
-          cancelUrl: cancelUrl || `${window.location.origin}/pricing`,
-        },
-      });
+          userId: user.id,
+          billing
+        }
+      })
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast.error(`Checkout failed: ${error.message}`);
-    },
-  });
+      if (error) throw error
 
-  // Create Stripe customer portal session
-  const createPortalMutation = useMutation({
-    mutationFn: async (returnUrl?: string) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      if (!currentSubscription?.stripe_customer_id) {
-        throw new Error('No active subscription found');
-      }
+      // Redirect to Stripe Checkout
+      const stripe = await getStripe()
+      if (!stripe) throw new Error('Stripe not loaded')
 
-      // For development, redirect to settings
-      if (process.env.NODE_ENV === 'development') {
-        return {
-          url: '/dashboard/settings?tab=billing',
-        };
-      }
+      const { error: stripeError } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId
+      })
 
-      // TODO: Implement Stripe customer portal session creation
+      if (stripeError) throw stripeError
+
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error)
+      toast.error(error.message || 'Failed to start checkout process')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [user])
+
+  // Cancel subscription
+  const cancelSubscription = useCallback(async () => {
+    if (!subscription?.stripeSubscriptionId) return
+
+    setIsProcessing(true)
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-subscription', {
+        body: {
+          action: 'cancel',
+          subscriptionId: subscription.stripeSubscriptionId
+        }
+      })
+
+      if (error) throw error
+
+      toast.success('Subscription will be canceled at the end of the current period')
+      await loadSubscription() // Reload data
+
+    } catch (error: any) {
+      console.error('Error canceling subscription:', error)
+      toast.error(error.message || 'Failed to cancel subscription')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [subscription, loadSubscription])
+
+  // Reactivate subscription
+  const reactivateSubscription = useCallback(async () => {
+    if (!subscription?.stripeSubscriptionId) return
+
+    setIsProcessing(true)
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-subscription', {
+        body: {
+          action: 'reactivate',
+          subscriptionId: subscription.stripeSubscriptionId
+        }
+      })
+
+      if (error) throw error
+
+      toast.success('Subscription reactivated successfully')
+      await loadSubscription() // Reload data
+
+    } catch (error: any) {
+      console.error('Error reactivating subscription:', error)
+      toast.error(error.message || 'Failed to reactivate subscription')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [subscription, loadSubscription])
+
+  // Update payment method
+  const updatePaymentMethod = useCallback(async () => {
+    if (!subscription?.stripeCustomerId) return
+
+    setIsProcessing(true)
+
+    try {
       const { data, error } = await supabase.functions.invoke('create-portal-session', {
         body: {
-          customerId: currentSubscription.stripe_customer_id,
-          returnUrl: returnUrl || `${window.location.origin}/dashboard/settings`,
-        },
-      });
+          customerId: subscription.stripeCustomerId,
+          returnUrl: window.location.href
+        }
+      })
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast.error(`Portal access failed: ${error.message}`);
-    },
-  });
+      if (error) throw error
 
-  // Check if user can perform an action based on their plan
-  const canPerformAction = (action: string, resourceType?: string): boolean => {
-    if (!usageData) return false;
+      // Redirect to Stripe Customer Portal
+      window.location.href = data.url
 
-    switch (action) {
-      case 'upload_audio':
-        return usageData.current_usage < usageData.usage_quota || 
-               usageData.usage_quota === -1; // -1 means unlimited
-      
-      case 'create_team':
-        return ['pro', 'agency'].includes(usageData.subscription_tier);
-      
-      case 'api_access':
-        return usageData.subscription_tier === 'agency';
-      
-      case 'priority_support':
-        return ['pro', 'agency'].includes(usageData.subscription_tier);
-      
-      case 'custom_branding':
-        return usageData.subscription_tier === 'agency';
-      
-      default:
-        return true;
+    } catch (error: any) {
+      console.error('Error creating portal session:', error)
+      toast.error(error.message || 'Failed to open billing portal')
+    } finally {
+      setIsProcessing(false)
     }
-  };
+  }, [subscription])
 
-  // Get feature availability for current plan
-  const getFeatureAccess = () => {
-    const currentPlan = plans.find(p => p.name === usageData?.subscription_tier);
-    return currentPlan?.features || {};
-  };
+  // Check if user can use a feature
+  const canUseFeature = useCallback((feature: string) => {
+    if (!subscription) return false
 
-  // Calculate usage percentage
-  const getUsagePercentage = (): number => {
-    if (!usageData) return 0;
-    if (usageData.usage_quota === -1) return 0; // Unlimited
-    return Math.min((usageData.current_usage / usageData.usage_quota) * 100, 100);
-  };
+    const plan = SUBSCRIPTION_PLANS[subscription.planId]
+    
+    switch (feature) {
+      case 'ai_features':
+        return plan.limits.aiFeatures
+      case 'api_access':
+        return plan.limits.apiAccess
+      case 'priority_support':
+        return plan.limits.prioritySupport
+      case 'team_collaboration':
+        return plan.limits.teamMembers > 1
+      default:
+        return true
+    }
+  }, [subscription])
 
-  // Get days until quota reset
-  const getDaysUntilReset = (): number => {
-    if (!usageData?.quota_reset_date) return 0;
-    const resetDate = new Date(usageData.quota_reset_date);
-    const today = new Date();
-    const diffTime = resetDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
+  // Check if user is within usage limits
+  const isWithinLimits = useCallback(() => {
+    if (!subscription || !usage) return false
 
-  // Check if user is on trial
-  const isOnTrial = (): boolean => {
-    if (!currentSubscription?.trial_end) return false;
-    return new Date(currentSubscription.trial_end) > new Date();
-  };
+    const plan = SUBSCRIPTION_PLANS[subscription.planId]
+    
+    // Unlimited plans
+    if (plan.limits.uploadsPerMonth === -1) return true
+    
+    // Check monthly usage limit
+    return usage.currentUsage < plan.limits.uploadsPerMonth
+  }, [subscription, usage])
 
-  // Get trial days remaining
-  const getTrialDaysRemaining = (): number => {
-    if (!currentSubscription?.trial_end) return 0;
-    const trialEnd = new Date(currentSubscription.trial_end);
-    const today = new Date();
-    const diffTime = trialEnd.getTime() - today.getTime();
-    return Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 0);
-  };
+  // Get current plan details
+  const getCurrentPlan = useCallback(() => {
+    if (!subscription) return SUBSCRIPTION_PLANS.free
+    return SUBSCRIPTION_PLANS[subscription.planId]
+  }, [subscription])
+
+  useEffect(() => {
+    loadSubscription()
+  }, [loadSubscription])
+
+  // Listen for subscription changes via real-time
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('subscription-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'subscriptions',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        loadSubscription()
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`
+      }, () => {
+        loadSubscription()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, loadSubscription])
 
   return {
-    // Data
-    plans,
-    currentSubscription,
-    usageData,
-    
-    // Loading states
-    isLoadingPlans,
-    isLoadingSubscription,
-    isLoadingUsage,
-    
-    // Errors
-    plansError,
-    subscriptionError,
-    usageError,
-    
-    // Mutations
-    createCheckout: createCheckoutMutation.mutate,
-    isCreatingCheckout: createCheckoutMutation.isPending,
-    
-    createPortal: createPortalMutation.mutate,
-    isCreatingPortal: createPortalMutation.isPending,
-    
-    // Utilities
-    canPerformAction,
-    getFeatureAccess,
-    getUsagePercentage,
-    getDaysUntilReset,
-    isOnTrial,
-    getTrialDaysRemaining,
-  };
-}; 
+    subscription,
+    usage,
+    isLoading,
+    isProcessing,
+    createCheckoutSession,
+    cancelSubscription,
+    reactivateSubscription,
+    updatePaymentMethod,
+    canUseFeature,
+    isWithinLimits,
+    getCurrentPlan,
+    reload: loadSubscription
+  }
+} 

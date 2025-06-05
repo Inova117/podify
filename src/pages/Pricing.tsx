@@ -1,219 +1,189 @@
+import React from 'react'
+import { PricingPlans } from '@/components/PricingPlans'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { 
+  ArrowLeft, 
+  Shield, 
+  Headphones, 
+  Zap, 
+  Users,
+  Star,
+  CheckCircle,
+  MessageCircle
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check, Zap, Crown, Building2, ArrowRight } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { MockCheckoutModal } from "@/components/MockCheckoutModal";
-
-const Pricing = () => {
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const plans = [
-    {
-      id: "hobby",
-      name: "Hobby",
-      price: "$9",
-      period: "/month",
-      description: "Perfect for content creators getting started",
-      icon: Zap,
-      features: [
-        "5 audio uploads per month",
-        "Basic content generation",
-        "Email support",
-        "Standard processing speed",
-        "Basic analytics"
-      ],
-      popular: false,
-      color: "from-blue-600 to-purple-600"
-    },
-    {
-      id: "pro",
-      name: "Pro",
-      price: "$29",
-      period: "/month",
-      description: "For serious content creators and small teams",
-      icon: Crown,
-      features: [
-        "50 audio uploads per month",
-        "Advanced content generation",
-        "Priority support",
-        "Fast processing speed",
-        "Advanced analytics",
-        "Custom templates",
-        "Brand customization"
-      ],
-      popular: true,
-      color: "from-purple-600 to-pink-600"
-    },
-    {
-      id: "agency",
-      name: "Agency",
-      price: "$99",
-      period: "/month",
-      description: "For agencies and large content teams",
-      icon: Building2,
-      features: [
-        "Unlimited audio uploads",
-        "Premium content generation",
-        "24/7 dedicated support",
-        "Instant processing",
-        "Enterprise analytics",
-        "White-label solution",
-        "API access",
-        "Team collaboration",
-        "Custom integrations"
-      ],
-      popular: false,
-      color: "from-pink-600 to-red-600"
-    }
-  ];
-
-  const handleSubscribe = (planId: string) => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    setSelectedPlan(planId);
-    setShowCheckout(true);
-  };
-
-  const handleGoBack = () => {
-    navigate('/');
-  };
-
+export default function Pricing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      <div className="container mx-auto px-4 py-16">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <Button
-            variant="ghost"
-            onClick={handleGoBack}
-            className="text-white hover:bg-white/10 mb-8"
-          >
-            ← Back to Home
-          </Button>
-          <h1 className="text-5xl font-bold text-white mb-6">
-            Choose Your Plan
-          </h1>
-          <p className="text-xl text-white/80 max-w-2xl mx-auto">
-            Transform your audio content into viral social media posts with AI-powered tools
-          </p>
-        </div>
-
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan) => {
-            const Icon = plan.icon;
-            return (
-              <Card 
-                key={plan.id}
-                className={`relative bg-white/10 backdrop-blur-lg border-white/20 hover:bg-white/15 transition-all duration-300 ${
-                  plan.popular ? 'scale-105 border-2 border-purple-400' : ''
-                }`}
-              >
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                    Most Popular
-                  </Badge>
-                )}
-                
-                <CardHeader className="text-center pb-4">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${plan.color} flex items-center justify-center`}>
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold text-white">
-                    {plan.name}
-                  </CardTitle>
-                  <div className="text-white/80 mb-2">
-                    {plan.description}
-                  </div>
-                  <div className="text-4xl font-bold text-white">
-                    {plan.price}
-                    <span className="text-lg text-white/60">{plan.period}</span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-3 text-white/90">
-                        <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handleSubscribe(plan.id)}
-                    className={`w-full bg-gradient-to-r ${plan.color} hover:opacity-90 text-white font-semibold py-3`}
-                  >
-                    Subscribe Now
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-20 text-center">
-          <h2 className="text-3xl font-bold text-white mb-8">
-            Frequently Asked Questions
-          </h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="text-left">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Can I change plans anytime?
-              </h3>
-              <p className="text-white/70">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.
-              </p>
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                What payment methods do you accept?
-              </h3>
-              <p className="text-white/70">
-                We accept all major credit cards, PayPal, and bank transfers for enterprise plans.
-              </p>
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Is there a free trial?
-              </h3>
-              <p className="text-white/70">
-                Yes, all plans come with a 7-day free trial. No credit card required to start.
-              </p>
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Do you offer refunds?
-              </h3>
-              <p className="text-white/70">
-                We offer a 30-day money-back guarantee if you're not satisfied with our service.
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* Header */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
+          <Link to="/auth" className="text-primary hover:underline">
+            Sign In
+          </Link>
         </div>
       </div>
 
-      {/* Mock Checkout Modal */}
-      {showCheckout && selectedPlan && (
-        <MockCheckoutModal
-          plan={plans.find(p => p.id === selectedPlan)!}
-          onClose={() => setShowCheckout(false)}
-        />
-      )}
-    </div>
-  );
-};
+      {/* Main Content */}
+      <div className="container mx-auto px-4">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <Badge className="mb-4">Simple, Transparent Pricing</Badge>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Choose the Perfect Plan
+            <br />
+            <span className="text-primary">for Your Needs</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Start free and scale as you grow. All plans include our core AI features,
+            with advanced capabilities and higher limits as you upgrade.
+          </p>
+        </div>
 
-export default Pricing;
+        {/* Trust Indicators */}
+        <div className="flex flex-wrap items-center justify-center gap-8 mb-16 opacity-60">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            <span className="text-sm">SOC 2 Compliant</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span className="text-sm">99.9% Uptime SLA</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5" />
+            <span className="text-sm">4.9/5 Customer Rating</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Headphones className="w-5 h-5" />
+            <span className="text-sm">24/7 Support</span>
+          </div>
+        </div>
+
+        {/* Pricing Plans */}
+        <PricingPlans showHeader={false} />
+
+        {/* Enterprise Section */}
+        <div className="mt-20 mb-16">
+          <Card className="border-2 border-dashed border-muted-foreground/20">
+            <CardContent className="p-8 text-center">
+              <div className="max-w-2xl mx-auto">
+                <h3 className="text-2xl font-bold mb-4">Need Something Custom?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Looking for custom integrations, on-premise deployment, or volume discounts? 
+                  Our enterprise team can help you build the perfect solution.
+                </p>
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <Button size="lg">
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Contact Sales
+                  </Button>
+                  <Button variant="outline" size="lg">
+                    Schedule Demo
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Feature Spotlight */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Lightning Fast</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Process your audio files in real-time with our optimized AI pipeline. 
+                Most files are ready in under 2 minutes.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Team Collaboration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Work together seamlessly with role-based permissions, shared workspaces, 
+                and real-time collaboration features.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle>Enterprise Security</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Your data is protected with enterprise-grade security, encryption at rest, 
+                and compliance with industry standards.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* CTA Section */}
+        <div className="text-center py-16">
+          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Join thousands of content creators who are already transforming their audio 
+            into engaging content with our AI-powered platform.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button size="lg" asChild>
+              <Link to="/auth?mode=signup">Start Free Trial</Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/demo">Watch Demo</Link>
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            No credit card required • 7-day free trial • Cancel anytime
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-muted/30 mt-20">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-wrap items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+                Terms of Service
+              </Link>
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+                Privacy Policy
+              </Link>
+              <Link to="/support" className="text-sm text-muted-foreground hover:text-foreground">
+                Support
+              </Link>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              © 2024 Podify Content Genius. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
