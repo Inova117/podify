@@ -1,11 +1,25 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { FileAudio, Settings, History, Plus, Share2, Calendar, Clock, User, LogOut } from "lucide-react";
+import { 
+  FileAudio, 
+  Settings, 
+  History, 
+  Plus, 
+  Share2, 
+  Calendar, 
+  Clock, 
+  User, 
+  LogOut, 
+  Zap, 
+  BarChart3, 
+  Target, 
+  Building2, 
+  DollarSign 
+} from "lucide-react";
 import { ContentLibrary } from "@/components/dashboard/ContentLibrary";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -13,6 +27,12 @@ import { ConfigurationPanel } from "@/components/dashboard/ConfigurationPanel";
 import { SubscriptionStatus } from "@/components/SubscriptionStatus";
 import { LoadingStates } from "@/components/LoadingStates";
 import { ErrorStates } from "@/components/ErrorStates";
+import { ContentOptimizer } from "@/components/ContentOptimizer";
+import { SmartScheduler } from "@/components/SmartScheduler";
+import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
+import BrandMarketplace from "@/components/BrandMarketplace";
+import RevenueOptimizer from "@/components/RevenueOptimizer";
+import BusinessCoachingSuite from '@/components/BusinessCoachingSuite';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -165,6 +185,30 @@ const Dashboard = () => {
               <History className="w-4 h-4 mr-2" />
               Content Library
             </TabsTrigger>
+            <TabsTrigger value="optimizer" className="text-white data-[state=active]:bg-white/20">
+              <Zap className="w-4 h-4 mr-2" />
+              Content Optimizer
+            </TabsTrigger>
+            <TabsTrigger value="scheduler" className="text-white data-[state=active]:bg-white/20">
+              <Calendar className="w-4 h-4 mr-2" />
+              Smart Scheduler
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="text-white data-[state=active]:bg-white/20">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Advanced Analytics
+            </TabsTrigger>
+            <TabsTrigger value="marketplace" className="text-white data-[state=active]:bg-white/20">
+              <Building2 className="w-4 h-4 mr-2" />
+              Brand Marketplace
+            </TabsTrigger>
+            <TabsTrigger value="revenue" className="text-white data-[state=active]:bg-white/20">
+              <DollarSign className="w-4 h-4 mr-2" />
+              Revenue Optimizer
+            </TabsTrigger>
+            <TabsTrigger value="coaching" className="text-white data-[state=active]:bg-white/20">
+              <Target className="w-4 h-4 mr-2" />
+              Business Coaching Suite
+            </TabsTrigger>
             <TabsTrigger value="settings" className="text-white data-[state=active]:bg-white/20">
               <Settings className="w-4 h-4 mr-2" />
               Configuration
@@ -231,6 +275,30 @@ const Dashboard = () => {
 
           <TabsContent value="library" className="space-y-6">
             <ContentLibrary onRetry={handleRetry} />
+          </TabsContent>
+
+          <TabsContent value="optimizer" className="space-y-6">
+            <ContentOptimizer />
+          </TabsContent>
+
+          <TabsContent value="scheduler" className="space-y-6">
+            <SmartScheduler />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <AdvancedAnalytics />
+          </TabsContent>
+
+          <TabsContent value="marketplace" className="space-y-6">
+            <BrandMarketplace />
+          </TabsContent>
+
+          <TabsContent value="revenue" className="space-y-6">
+            <RevenueOptimizer />
+          </TabsContent>
+
+          <TabsContent value="coaching" className="space-y-6">
+            <BusinessCoachingSuite />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
